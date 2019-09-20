@@ -1,0 +1,38 @@
+version: "3"
+services:
+  zookeeper:
+    image: debezium/zookeeper:0.9
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+      - "2888:2888"
+      - "3888:3888"
+
+  kafka:
+    image: debezium/kafka:0.9
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      - ZOOKEEPER_CONNECT=zookeeper:2181
+    links:
+      - zookeeper:zookeeper
+    depends_on:
+      - zookeeper
+
+  kafka_connect:
+    image: debezium/connect:0.9
+    container_name: kconnect
+    ports:
+      - "8083:8083"
+    environment:
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=connect_configs
+      - OFFSET_STORAGE_TOPIC=connect_offsets
+      - STATUS_STORAGE_TOPIC=connect_statuses
+    depends_on:
+      - kafka
+    links:
+      - zookeeper
+      - kafka
