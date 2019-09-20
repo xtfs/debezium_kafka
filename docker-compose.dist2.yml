@@ -1,0 +1,57 @@
+zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+      - "2888:2888"
+      - "3888:3888"
+    networks:
+      my_net:
+        ipv4_address: 192.168.20.7
+
+  kafka:
+    image: wurstmeister/kafka:2.12-2.3.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - KAFKA_ADVERTISED_HOST_NAME=192.168.20.8
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+    links:
+      - zookeeper:zookeeper
+    depends_on:
+      - zookeeper
+    networks:
+      my_net:
+        ipv4_address: 192.168.20.8
+
+  kafka_connect:
+    image: debezium/connect:0.9
+    container_name: kconnect
+    ports:
+      - "8083:8083"
+    environment:
+      - ZOOKEEPER_CONNECT=zookeeper:2181
+      - BOOTSTRAP_SERVERS=kafka:9092
+      - GROUP_ID=1
+      - CONFIG_STORAGE_TOPIC=connect_configs
+      - OFFSET_STORAGE_TOPIC=connect_offsets
+      - STATUS_STORAGE_TOPIC=connect_statuses
+      - CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE=false
+    depends_on:
+      - kafka
+    links:
+      - zookeeper
+      - kafka
+    networks:
+      my_net:
+        ipv4_address: 192.168.20.9
+
+networks:
+  my_net:
+    ipam:
+      driver: default
+      config:
+      - subnet: 192.168.20.0/24
